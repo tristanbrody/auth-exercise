@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %}{{user.username}} | Your Account{% endblock %}
+
+{% block content %}
+<h1>Way to log in!</h1>
+{% if 'username' in session %}
+<ul>
+    <li>{{user.username}}</li>
+    <li>{{user.email}}</li>
+    <li>{{user.first_name}}</li>
+    <li>{{user.last_name}}</li>
+</ul>
+{% endif %}
+<form action="/logout" method="POST">
+    <button class="logout-button">Log out</button>
+</form>
+{% endblock %}
