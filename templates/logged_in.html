@@ -3,6 +3,9 @@
 {% block title %}{{user.username}} | Your Account{% endblock %}
 
 {% block content %}
+{% for flashed_message in get_flashed_messages()%}
+{{flashed_message }}
+{% endfor %}
 <h1>Way to log in!</h1>
 {% if 'username' in session %}
 <ul>
@@ -12,6 +15,40 @@
     <li>{{user.last_name}}</li>
 </ul>
 {% endif %}
+<form action="/users/{{user.username}}/feedback/add" method="POST">
+    {{ form.hidden_tag() }}
+    {% for field in form if field.widget.input_type != 'hidden' %}
+    <div class="login-form--item input-wrapper">
+        {{field.label(class_="")}}
+        {{field(class_="")}}
+        {% for error in field.errors %}
+        {{ error }}
+        {% endfor %}
+    </div>
+    {% endfor %}
+
+    <button>Add Feedback</button>
+</form>
+{% if feedback %}
+<h3>Your feedback:</h3>
+{% for item in feedback %}
+
+<div class="feedback-item">
+    <h4>{{item.title}}</h4>
+    <h5>{{item.created_at}}</h5>
+    <p>{{item.content}}</p>
+    <form action="/feedback/{{item.id}}/update">
+        <button>Edit</button>
+    </form>
+    <form action="/feedback/{{item.id}}/delete" method="POST">
+        <button class="delete-button">Delete</button>
+        <!--TODO add font awesome icon for delete-->
+    </form>
+</div>
+
+{% endfor %}
+{% endif %}
+
 <form action="/logout" method="POST">
     <button class="logout-button">Log out</button>
 </form>

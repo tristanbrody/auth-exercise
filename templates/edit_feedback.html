@@ -1,0 +1,19 @@
+{%extends 'base.html'%}
+
+{%block title%}Edit Feedback{%endblock%}
+
+{%block content%}
+<form action="." method="POST">
+    {{ form.hidden_tag() }}
+    {% for field in form if field.widget.input_type != 'hidden' %}
+    <div class="login-form--item input-wrapper">
+        {{field.label(class_="")}}
+        {{field(class_="")}}
+        {% for error in field.errors %}
+        {{ error }}
+        {% endfor %}
+    </div>
+    {%endfor%}
+    <button>Submit</button>
+</form>
+{%endblock%}
