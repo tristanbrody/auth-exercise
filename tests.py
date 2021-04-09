@@ -2,7 +2,7 @@
 
 from unittest import TestCase
 
-from flask import url_for
+from flask import url_for, request
 from app import app
 from models import db, User, Feedback
 
@@ -33,9 +33,18 @@ class AuthViewsTestCase(TestCase):
             response = self.register('hungry242', 'supersecure', 'jason@yahoo.com', 'Jason', 'Score')
             self.assertEqual(response.status_code, 200)
 
-    def test_login
+    def test_login(self):
+        with app.app_context(), app.test_request_context():
+            response = self.login('fake@fake.org', 'donuts123')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(request.path, '/users/pancakes123')
             
-
+    def test_logout(self):
+        with app.app_context(), app.test_request_context():
+            self.login('fake@fake.org', 'donuts123')
+            response = self.logout()
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(request.path, '/')
     # helper methods below
 
     def register(self, username, password, email, first_name, last_name):
