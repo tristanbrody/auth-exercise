@@ -17,6 +17,8 @@ class User(db.Model):
     email = db.Column(db.String(50), nullable=False)
     first_name = db.Column(db.String(30), nullable=False)
     last_name = db.Column(db.String(30), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
+    #TODO implement logic surrounding is_admin column
 
     @classmethod
     def register(cls, username, password, email, first_name, last_name):
