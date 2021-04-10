@@ -1,13 +1,12 @@
-#TODO add tests
-
 from unittest import TestCase
 
-from flask import url_for, request
-from app import app
+from flask import url_for, request, json
+from app import app, LOGIN_ROOT
 from models import db, User, Feedback
+from forms import LoginForm
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///auth_exercise_test'
-app.config['SQLALCHEMY_ECHO'] = True
+app.config['SQLALCHEMY_ECHO'] = False
 app.config['TESTING'] = True
 app.config['WTF_CSRF_ENABLED'] = False
 
@@ -17,41 +16,48 @@ db.create_all()
 class AuthViewsTestCase(TestCase):
 
     def setUp(self):
-        self.app = app.test_client()
-        user1 = User(username="pancakes123", password="donuts123", email="fake@fake.org", first_name="Daniel Day", last_name="Lewis")
-        db.session.add(user1)
+        User.query.delete()
         db.session.commit()
+        self.app = app.test_client()
+        with app.app_context(), app.test_request_context():
+            test_data = {'username': 'hungry242', 'password': 'supersecure', 'email': 'jason@yahoo.com', 'first_name': 'Jason', 'last_name': 'Score'}
+            self.register(test_data)
 
     def tearDown(self):
         db.session.rollback()
-        
-        User.query.delete()
-        db.session.commit()
-
+    
     def test_registration(self):
         with app.app_context(), app.test_request_context():
-            response = self.register('hungry242', 'supersecure', 'jason@yahoo.com', 'Jason', 'Score')
-            self.assertEqual(response.status_code, 200)
+            test_data = {'username': 'hungry242', 'password': 'supersecure', 'email': 'jason@yahoo.com', 'first_name': 'Jason', 'last_name': 'Score'}
+            response = self.register(test_data)
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(response.location, 'http://localhost/users/hungry242')
 
     def test_login(self):
         with app.app_context(), app.test_request_context():
-            response = self.login('fake@fake.org', 'donuts123')
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(request.path, '/users/pancakes123')
+            test_data = {
+                'username': 'hungry242', 'password': 'supersecure'
+            }
+            response = self.login(test_data)
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(response.location, 'http://localhost/users/hungry242')
             
     def test_logout(self):
         with app.app_context(), app.test_request_context():
-            self.login('fake@fake.org', 'donuts123')
+            test_data = {
+                'username': 'pancakes123', 'password': 'donuts123'
+            }
+            self.login(test_data)
             response = self.logout()
             self.assertEqual(response.status_code, 200)
             self.assertEqual(request.path, '/')
     # helper methods below
 
-    def register(self, username, password, email, first_name, last_name):
-        return self.app.post(url_for('register', data=dict(username=username, password=password,email=email,first_name=first_name,last_name=last_name),follow_redirects=True))
+    def register(self, data):
+        return self.app.post('/register', data=data)
 
-    def login(self, username, password):
-        return self.app.get(url_for('show_login', data=dict(username=username, password=password)))
+    def login(self, data):
+        return self.app.post(LOGIN_ROOT, data=data)
 
     def logout(self):
-        return self.app.post(url_for('process_logout'), follow_redirects=True)
+        return self.app.post('/logout', follow_redirects=True)

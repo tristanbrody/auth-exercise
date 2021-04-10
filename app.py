@@ -8,11 +8,12 @@ from forms import AddUserForm, LoginForm, FeedbackForm
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///auth_exercise'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ECHO'] = True
+app.config['SQLALCHEMY_ECHO'] = False
 app.config['SECRET_KEY'] = "SECRET!"
 debug = DebugToolbarExtension(app)
 bcrypt = Bcrypt()
 connect_db(app)
+LOGIN_ROOT = '/login'
 
 #TODO clean up view functions by moving most of the logic to some sort of controller
 
@@ -41,7 +42,7 @@ def register():
         return redirect(url_for('show_logged_in', username=session['username']))
     return render_template('sign_up.html', form=form)
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route(LOGIN_ROOT, methods=['GET', 'POST'])
 def show_login():
     if 'username' in session:
         return redirect(url_for('show_logged_in', username=session['username']))
@@ -59,11 +60,14 @@ def show_login():
 def show_logged_in(username):
     if 'username' not in session: 
         flash("Please log in first to view this")
-        return redirect('/login')
+        return redirect(LOGIN_ROOT)
     user = User.query.get(session['username'])
     if user == None:
-        return redirect('/login')
-    feedback = Feedback.query.filter_by(username=session['username']).all()
+        return redirect(LOGIN_ROOT)
+    if user.is_admin: 
+        feedback = Feedback.query.all()
+    else: 
+        feedback = Feedback.query.filter_by(username=session['username']).all()
     form = FeedbackForm()
     return render_template('logged_in.html',user=user, form=form, feedback=feedback)
 
@@ -75,10 +79,22 @@ def process_logout():
 @app.route('/logout', methods=['GET'])
 def redirect_logout():
     """Only accept logout requests made via post"""
+    flash("Please log out from your account")
     return redirect(url_for('show_login'))
 
 @app.route('/users/<username>/delete', methods=['POST'])
 def delete_account(username):
+    if 'username' not in session: 
+        flash("Please log in")
+        return redirect(LOGIN_ROOT)
+    user = User.query.get(session['username'])
+    if user == None:
+        return redirect(LOGIN_ROOT)
+    if username != session['username'] and not user.is_admin: 
+        return redirect('/')
+    User.query.delete(username)
+    db.session.commit()
+    flash("Your account has been deleted")
     return redirect('/')
 
 @app.route('/users/<username>/feedback/add', methods=['POST'])
@@ -89,7 +105,6 @@ def handle_feedback_form(username):
     if username != session['username']:
         flash("You can't post feedback for somebody else's account!")
         return redirect(url_for('show_logged_in'))
-
     form = FeedbackForm()
     if form.validate_on_submit():
         title = form.title.data
@@ -112,8 +127,6 @@ def handle_feedback_update(feedback_id):
     if feedback.username != session['username']:
         flash("You can't update feedback for somebody else's account!")
         return redirect(url_for('show_logged_in', username=session['username']))
-
-
     form = FeedbackForm()
     if form.validate_on_submit():
         feedback.title = form.title.data
@@ -138,6 +151,8 @@ def delete_feedback(feedback_id):
     flash("Your post has been deleted")
     return redirect(url_for('show_logged_in', username=session['username']))
 
-# def check_if_logged_in():
-#     if 'username' in session:
-#         redirect(url_for('show_logged_in', username=session['username']))
+#helper functions
+
+def check_if_logged_in():
+    if 'username' in session:
+        redirect(url_for('show_logged_in', username=session['username']))
